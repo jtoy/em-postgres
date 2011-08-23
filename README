@@ -1,0 +1,40 @@
+Async MySQL driver for Ruby/EventMachine
+  (c) 2008 Aman Gupta (tmm1)
+
+
+Requires mysqlplus.
+
+  require 'em/mysql'
+
+  # alias SQL for simpler syntax
+
+  SQL = EventedMysql
+  def SQL(query, &blk) SQL.select(query, &blk) end
+
+  
+  # setup connection details and allow 4 connections to the server
+
+  SQL.settings.update :host => 'localhost',
+                      :port => 3306,
+                      :database => 'test',
+                      :connections => 4
+  
+
+  # use 4 connections to execute queries in parallel
+
+  SQL('select sleep(0.25)'){ p 'done' }
+  SQL('select sleep(0.25)'){ p 'done' }
+  SQL('select sleep(0.25)'){ p 'done' }
+  SQL('select sleep(0.25)'){ p 'done' }
+
+Also includes a sequel async wrapper
+
+  require 'sequel'
+  require 'sequel/async'
+
+  DB = Sequel.connect(:adapter => 'mysql', :user => 'root', :database => 'test', ...)
+  EventedMysql.settings.update(..., :on_error => proc{|e| log 'error', e })
+
+  DB[:table].where(:field => 'value').async_update(:field => 'new value')
+
+For more info, see the comments in lib/sequel/async.rb
