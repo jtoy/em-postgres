@@ -9,7 +9,7 @@ describe EventMachine::Postgres do
   it "should create a new connection" do
     EventMachine.run {
       lambda {
-        conn = EventMachine::Postgres.new(:database => "socmetrics")
+        conn = EventMachine::Postgres.new(:database => "test")
         conn.connection.connected.should be_true
         conn.close
         conn.connection.connected.should be_false
@@ -35,7 +35,7 @@ describe EventMachine::Postgres do
 
   it "should execute sql" do
     EventMachine.run {
-      conn = EventMachine::Postgres.new(:database => "socmetrics")
+      conn = EventMachine::Postgres.new(:database => "test")
       query = conn.query("select 1;")
       query.callback { |res|
         res.fetch_row.first.should == "1"
@@ -46,7 +46,7 @@ describe EventMachine::Postgres do
 
   it "should accept block as query callback" do
     EventMachine.run {
-      conn = EventMachine::Postgres.new(:host => 'localhost')
+      conn = EventMachine::Postgres.new(:database => 'test')
       conn.query("select 1") { |res|
         res.fetch_row.first.should == "1"
         EventMachine.stop
@@ -56,7 +56,7 @@ describe EventMachine::Postgres do
 
   it "allow custom error callbacks for each query" do
     EventMachine.run {
-      conn = EventMachine::Postgres.new(:host => 'localhost')
+      conn = EventMachine::Postgres.new(:database => "test")
       query = conn.query("select 1 from")
       query.errback { |res|
         res.class.should == Mysql::Error
@@ -67,7 +67,7 @@ describe EventMachine::Postgres do
 
   it "queue up queries and execute them in order" do
     EventMachine.run {
-      conn = EventMachine::Postgres.new(:host => 'localhost')
+      conn = EventMachine::Postgres.new(:database => 'test')
 
       results = []
       conn.query("select 1") {|res| results.push res.fetch_row.first.to_i}
@@ -83,7 +83,7 @@ describe EventMachine::Postgres do
 
   it "should continue processing queries after hitting an error" do
     EventMachine.run {
-      conn = EventMachine::Postgres.new(:host => 'localhost')
+      conn = EventMachine::Postgres.new(:database=> 'test')
 
       conn.query("select 1+ from table")
       conn.query("select 1+1") { |res|
@@ -95,7 +95,7 @@ describe EventMachine::Postgres do
 
   it "should work with synchronous commands" do
     EventMachine.run {
-      conn = EventMachine::Postgres.new(:host => 'localhost', :database => 'test')
+      conn = EventMachine::Postgres.new(:database => 'test')
 
       conn.list_dbs.class.should == Array
       conn.list_tables.class.should == Array
