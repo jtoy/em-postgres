@@ -20,15 +20,14 @@ module EventMachine
     ] unless defined? DisconnectErrors
 
     #def initialize(array)
-    def initialize(postgres,opts,conn) 
-      puts s
+    #def initialize(postgres,opts,conn) 
+    #def initialize(postgres,opts,conn) 
+    def initialize(postgres,opts) 
       
-      @conn = conn
+      begin
+      #@conn = conn
       @postgres = postgres
-      puts 'OOO'
-      puts conn.inspect
-      #@fd = #postgres.socket
-      @fd = @conn.socket
+      @fd = postgres.socket
       @opts = opts
       @current = nil
       @queue = []
@@ -37,24 +36,83 @@ module EventMachine
 
       self.notify_readable = true
       EM.add_timer(0){ next_query }
+    rescue => e
+      puts e.inspect
+      puts 'SSS'
     end
+    end
+    
+    def self.connect(opts)
+      if conn = connect_socket(opts)
+        #debug [:connect, conn.socket, opts]
+        EM.watch(conn.socket, EventMachine::PostgresConnection,conn,opts)
+      else
+        # invokes :errback callback in opts before firing again
+        debug [:reconnect]
+        EM.add_timer(5) { connect opts }
+      end
+    end
+    
+    # stolen from sequel
+     def self.connect_socket(opts)
+     begin
+       conn = PGconn.connect(
+         opts[:host],
+         (opts[:port]), #TODO deal with host and port
+         nil,nil,
+         opts[:database],
+         opts[:user],
+         opts[:password]
+       )
+       # set encoding _before_ connecting
+       if encoding = opts[:encoding] || opts[:charset]
+         if conn.respond_to?(:set_client_encoding)
+           conn.set_client_encoding(encoding)
+         else
+           conn.async_exec("set client_encoding to '#{encoding}'")
+         end
+       end
+       conn
+     rescue Exception => e
+       puts "#{e} exception"
+       if cb = opts[:errback]
+         cb.call(e)
+         nil
+       else
+         raise e
+       end
+     end
+     end
 
     def notify_readable
-      
-      puts 'IN HERE'
+      puts "notify"
       if item = @current
         sql, cblk, eblk, retries = item
         result = @postgres.get_result
+        @postgres.get_result #TODO remove this, I can't process anymore code without this.
+        #debugger
+        
 
+        #@postgres.get_result{|r| result = r}
+        #result = @postgres.get_result
+
+        unless @postgres.error_message == ""
+          eb = (eblk || @opts[:on_error])
+          eb.call(result) if eb
+          @processing = false
+          @current = nil
+          next_query
+        end
         # kick off next query in the background
         # as we process the current results
         @current = nil
         @processing = false
         next_query
-
-        cblk.call(result)
+        cblk.call(result) if cblk
+        #result.clear
+        #next_query
       else
-        return close
+        return # close
       end
 
     rescue Exception => e
@@ -105,11 +163,9 @@ module EventMachine
     def execute(sql, cblk = nil, eblk = nil, retries = 0)
       begin
         if not @processing or not @connected
-          @processing = true
-          #@postgres.query(sql)
-          @conn.send_query(sql)
-          
-        else
+          @processing = true          
+          @postgres.send_query(sql)          
+        else          
           @queue << [sql, cblk, eblk, retries]
           return
         end
@@ -133,7 +189,7 @@ module EventMachine
     end
 
     def close
-      detach
+      fd = detach
       @conn.finish
       @connected = false
     end
@@ -141,10 +197,7 @@ module EventMachine
     private
 
       def next_query
-        puts "not do"
-        puts @queue
         if @connected and !@processing and pending = @queue.shift
-          puts "do a query"
           sql, cblk, eblk = pending
           execute(sql, cblk, eblk)
         end

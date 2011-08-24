@@ -2,6 +2,39 @@ require "eventmachine"
 require "pg"
 require "fcntl"
 
+
+module EventMachine
+  class Postgres
+
+  def self.settings
+    @settings ||= { :connections => 1, :logging => false,:database=>"test" }
+  end
+
+  def self.execute query, cblk = nil, eblk = nil, &blk
+    @n ||= 0
+    connection = connection_pool[@n]
+    @n = 0 if (@n+=1) >= connection_pool.size
+
+    #connection.execute(query, type, cblk, eblk, &blk)
+    
+    df = EventMachine::DefaultDeferrable.new
+    cb = blk || Proc.new { |r| df.succeed(r) }
+    eb = Proc.new { |r| df.fail(r) }
+    connection.execute(query,cb, eb)
+    df
+  end
+  #class << self
+  #  alias query execute 
+  #end
+  def self.connection_pool
+    @connection_pool ||= (1..settings[:connections]).map{ EventMachine::PostgresConnection.connect(settings) }
+    
+  end
+end
+end
+
+
+=begin
 module EventMachine
   class Postgres
 
@@ -43,8 +76,8 @@ module EventMachine
       if conn = connect_socket(opts)
         #debug [:connect, conn.socket, opts]
         #EM.watch(conn.socket, EventMachine::PostgresConnection, conn, opts, self)
+
         EM.watch(conn.socket, EventMachine::PostgresConnection,conn,opts,self)
-        
       else
         # invokes :errback callback in opts before firing again
         debug [:reconnect]
@@ -108,3 +141,4 @@ module EventMachine
     end
   end
 end
+=end
