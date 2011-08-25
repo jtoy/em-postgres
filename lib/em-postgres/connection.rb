@@ -19,13 +19,11 @@ module EventMachine
       'Lost connection to Postgres server during query'
     ] unless defined? DisconnectErrors
 
-    #def initialize(array)
-    #def initialize(postgres,opts,conn) 
-    #def initialize(postgres,opts,conn) 
-    def initialize(postgres,opts) 
+    def initialize(postgres,opts,conn) 
+    #def initialize(postgres,opts) 
       
       begin
-      #@conn = conn
+      @conn = conn
       @postgres = postgres
       @fd = postgres.socket
       @opts = opts
@@ -38,7 +36,6 @@ module EventMachine
       EM.add_timer(0){ next_query }
     rescue => e
       puts e.inspect
-      puts 'SSS'
     end
     end
     
@@ -88,31 +85,44 @@ module EventMachine
       puts "notify"
       if item = @current
         sql, cblk, eblk, retries = item
-        result = @postgres.get_result
-        @postgres.get_result #TODO remove this, I can't process anymore code without this.
+        #results = []
+        #result = nil
+        #@postgres.get_result{|r| result = r}
+        #@postgres.get_result #TODO remove this, I can't process anymore code without this.
+        result = nil        
+        loop do
+          # Fetch the next result. If there isn't one, the query is 
+          # finished
+          item = @postgres.get_result
+          if item
+            result = item
+          else
+            break
+          end
+          #puts "\n\nQuery result:\n%p\n" % [ result.values ]
+        end
         #debugger
-        
-
         #@postgres.get_result{|r| result = r}
         #result = @postgres.get_result
-
+        
         unless @postgres.error_message == ""
           eb = (eblk || @opts[:on_error])
           eb.call(result) if eb
+          result.clear
+          #reconnect
           @processing = false
-          @current = nil
+          #@current = nil
           next_query
         end
         # kick off next query in the background
         # as we process the current results
         @current = nil
         @processing = false
-        next_query
         cblk.call(result) if cblk
-        #result.clear
-        #next_query
+        result.clear
+        next_query
       else
-        return # close
+        return close
       end
 
     rescue Exception => e
@@ -124,7 +134,7 @@ module EventMachine
 
       elsif DisconnectErrors.include? e.message
         @queue << [sql, cblk, eblk, retries + 1]
-        return close
+        return #close
 
       elsif cb = (eblk || @opts[:on_error])
         cb.call(e)
@@ -135,8 +145,9 @@ module EventMachine
         raise e
       end
     end
-
+    
     def unbind
+
       # wait for the next tick until the current fd is removed completely from the reactor
       #
       # in certain cases the new FD# (@mysql.socket) is the same as the old, since FDs are re-used
@@ -145,25 +156,35 @@ module EventMachine
       # do _NOT_ use EM.next_tick here. if a bunch of sockets disconnect at the same time, we want
       # reconnects to happen after all the unbinds have been processed
 
-      @connected = false
-
-      EM.add_timer(0) do
-        @processing = false
-        @postgres = @conn.connect_socket(@opts)
-        @fd = @postgres.socket
-
-        @signature = EM.attach_fd(@postgres.socket, true)
-        EM.set_notify_readable @signature, true
-        EM.instance_variable_get('@conns')[@signature] = self
-        @connected = true
-        next_query
-      end
+      #@connected = false
+      EM.next_tick { reconnect }
     end
+    
+    def reconnect
+      puts "DDDDD"
+      @processing = false
+      @postgres = @conn.connect_socket(@opts)
+      @fd = @postgres.socket
+
+      @signature = EM.attach_fd(@postgres.socket, true)
+      EM.set_notify_readable(@signature, true)
+      EM.instance_variable_get('@conns')[@signature] = self
+      @connected = true
+      next_query
+
+    rescue Exception => e
+      EM.add_timer(1) { reconnect }
+    end
+
 
     def execute(sql, cblk = nil, eblk = nil, retries = 0)
       begin
+        #sdebugger
         if not @processing or not @connected
-          @processing = true          
+        #debugger
+        #if !@processing && @connected
+          @processing = true
+
           @postgres.send_query(sql)          
         else          
           @queue << [sql, cblk, eblk, retries]
@@ -174,7 +195,7 @@ module EventMachine
         puts "error in execute #{e}"
         if DisconnectErrors.include? e.message
           @queue << [sql, cblk, eblk, retries]
-          return close
+          return #close
         else
           raise e
         end
@@ -189,8 +210,9 @@ module EventMachine
     end
 
     def close
-      fd = detach
-      @conn.finish
+      return unless @connected
+      detach
+      @postgres.finish
       @connected = false
     end
 

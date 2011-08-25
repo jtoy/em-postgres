@@ -2,7 +2,7 @@ require "eventmachine"
 require "pg"
 require "fcntl"
 
-
+=begin
 module EventMachine
   class Postgres
 
@@ -32,9 +32,9 @@ module EventMachine
   end
 end
 end
+=end
 
 
-=begin
 module EventMachine
   class Postgres
 
@@ -66,7 +66,7 @@ module EventMachine
       df
     end
     alias :real_query :query
-
+    alias :execute :query
     # behave as a normal postgres connection
     def method_missing(method, *args, &blk)
       @connection.send(method, *args)
@@ -141,4 +141,3 @@ module EventMachine
     end
   end
 end
-=end
