@@ -3,3 +3,10 @@ Async PostgreSQL driver for Ruby/EventMachine
 
 
 Requires pg
+
+
+
+TODOS:
+get a working java driver
+ability to use different MRI postgres drivers (postgres-pr, pg, postgres)
+add working adaptors for activerecord and sequel

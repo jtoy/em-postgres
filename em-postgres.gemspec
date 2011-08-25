@@ -15,8 +15,8 @@ spec = Gem::Specification.new do |s|
     README
     Rakefile
     em-postgres.gemspec
-    lib/em-postsgres/postgres.rb
-    lib/em-postsgres/connection.rb
+    lib/em-postgres/postgres.rb
+    lib/em-postgres/connection.rb
     lib/em-postgres.rb
     spec/helper.rb
     spec/postgres_spec.rb
