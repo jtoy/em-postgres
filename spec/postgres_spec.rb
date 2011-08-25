@@ -31,7 +31,6 @@ describe EventMachine::Postgres do
   end
 
 
-puts 'PP'
   it "should execute sql" do
     EventMachine.run {
       #EM.add_periodic_timer(1){ puts }
@@ -57,7 +56,6 @@ puts 'PP'
 
 
 
-puts 'XXX'
   it "allow custom error callbacks for each query" do
     EventMachine.run {
       conn = EventMachine::Postgres.new(:database => "test")
@@ -72,7 +70,6 @@ puts 'XXX'
   end
 
 
-puts 'iii'
   it "queue up queries and execute them in order" do
     EventMachine.run {
       conn = EventMachine::Postgres.new(:database => 'test')
@@ -93,7 +90,6 @@ puts 'iii'
   end
 
 
-  puts 'uuu'
   it "queue up large amount of queries and execute them in order" do
     EventMachine.run {
 
@@ -111,8 +107,7 @@ puts 'iii'
     }
   end
 
-#=begin
-  puts 'qqqq'
+
   it "should continue processing queries after hitting an error" do
     EventMachine.run {
       conn = EventMachine::Postgres.new(:database=> 'test')
@@ -120,7 +115,6 @@ puts 'iii'
       #  true.should == true
         #EventMachine.stop
       #}
-      EM.add_periodic_timer(1){ puts "..."}
       q = conn.execute("select 1+ from table;") 
       q.errback{|r| puts "hi"; true.should == true } 
       conn.execute("select 1+1;"){ |res|
@@ -129,7 +123,7 @@ puts 'iii'
       }
     }
   end
-#=end
+
 =begin
   it "should work with synchronous commands" do
     EventMachine.run {
