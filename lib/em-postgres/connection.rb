@@ -82,7 +82,6 @@ module EventMachine
      end
 
     def notify_readable
-      puts "notify"
       if item = @current
         sql, cblk, eblk, retries = item
         #results = []
@@ -101,18 +100,16 @@ module EventMachine
           end
           #puts "\n\nQuery result:\n%p\n" % [ result.values ]
         end
-        #debugger
-        #@postgres.get_result{|r| result = r}
-        #result = @postgres.get_result
         
         unless @postgres.error_message == ""
+          #TODO this is wrong
           eb = (eblk || @opts[:on_error])
           eb.call(result) if eb
           result.clear
           #reconnect
           @processing = false
           #@current = nil
-          next_query
+          return next_query
         end
         # kick off next query in the background
         # as we process the current results
@@ -178,11 +175,10 @@ module EventMachine
 
 
     def execute(sql, cblk = nil, eblk = nil, retries = 0)
+      
       begin
-        #sdebugger
         if not @processing or not @connected
-        #debugger
-        #if !@processing && @connected
+        #if !@processing || !@connected
           @processing = true
 
           @postgres.send_query(sql)          
@@ -200,7 +196,6 @@ module EventMachine
           raise e
         end
       end
-
       @current = [sql, cblk, eblk, retries]
     end
 

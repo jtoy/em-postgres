@@ -111,7 +111,7 @@ puts 'iii'
     }
   end
 
-=begin
+#=begin
   puts 'qqqq'
   it "should continue processing queries after hitting an error" do
     EventMachine.run {
@@ -120,15 +120,16 @@ puts 'iii'
       #  true.should == true
         #EventMachine.stop
       #}
+      EM.add_periodic_timer(1){ puts "..."}
       q = conn.execute("select 1+ from table;") 
       q.errback{|r| puts "hi"; true.should == true } 
-      conn.execute("select 1+1;") { |res|
+      conn.execute("select 1+1;"){ |res|
         res.first["?column?"].to_i.should == 2
         EventMachine.stop
       }
     }
   end
-=end
+#=end
 =begin
   it "should work with synchronous commands" do
     EventMachine.run {
