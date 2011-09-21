@@ -56,13 +56,11 @@ module EventMachine
       @connection.close
     end
 
-    def query(sql, &blk)
+    def query(sql,params=[], &blk)
       df = EventMachine::DefaultDeferrable.new
       cb = blk || Proc.new { |r| df.succeed(r) }
       eb = Proc.new { |r| df.fail(r) }
-
-      @connection.execute(sql, cb, eb)
-
+      @connection.execute(sql,params,cb,eb)
       df
     end
     alias :real_query :query

@@ -83,7 +83,7 @@ module EventMachine
 
     def notify_readable
       if item = @current
-        sql, cblk, eblk, retries = item
+        sql,params, cblk, eblk, retries = item
         #results = []
         #result = nil
         #@postgres.get_result{|r| result = r}
@@ -130,7 +130,7 @@ module EventMachine
         next_query
 
       elsif DisconnectErrors.include? e.message
-        @queue << [sql, cblk, eblk, retries + 1]
+        @queue << [sql,params, cblk, eblk, retries + 1]
         return #close
 
       elsif cb = (eblk || @opts[:on_error])
@@ -158,7 +158,6 @@ module EventMachine
     end
     
     def reconnect
-      puts "DDDDD"
       @processing = false
       @postgres = @conn.connect_socket(@opts)
       @fd = @postgres.socket
@@ -174,16 +173,17 @@ module EventMachine
     end
 
 
-    def execute(sql, cblk = nil, eblk = nil, retries = 0)
+    def execute(sql,params=nil, cblk = nil, eblk = nil, retries = 0)
       
       begin
         if not @processing or not @connected
         #if !@processing || !@connected
           @processing = true
 
-          @postgres.send_query(sql)          
+          @postgres.send_query(sql,params)
+
         else          
-          @queue << [sql, cblk, eblk, retries]
+          @queue << [sql,params, cblk, eblk, retries]
           return
         end
 
@@ -196,7 +196,7 @@ module EventMachine
           raise e
         end
       end
-      @current = [sql, cblk, eblk, retries]
+      @current = [sql,params, cblk, eblk, retries]
     end
 
     # act like the pg driver

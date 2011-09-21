@@ -1,6 +1,5 @@
 $LOAD_PATH << File.join(File.dirname(__FILE__))
 require "helper"
-require "ruby-debug"
 describe EventMachine::Postgres do
   
   it "should be true" do
@@ -54,7 +53,17 @@ describe EventMachine::Postgres do
     }
   end
 
-
+  it "should accept paramaters" do
+    EventMachine.run {
+      conn = EventMachine::Postgres.new(:database => 'test')
+      conn.execute("select $1::int AS first,$2::int AS second,$3::varchar AS third;",[1,nil,'']) { |res|        
+        res.first["first"].should == "1"
+        res.first["second"].should == nil
+        res.first["third"].should == ""
+        EventMachine.stop
+      }
+    }
+  end
 
   it "allow custom error callbacks for each query" do
     EventMachine.run {
