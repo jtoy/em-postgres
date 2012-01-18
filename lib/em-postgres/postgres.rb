@@ -60,6 +60,7 @@ module EventMachine
       df = EventMachine::DefaultDeferrable.new
       cb = blk || Proc.new { |r| df.succeed(r) }
       eb = Proc.new { |r| df.fail(r) }
+      
       @connection.execute(sql,params,cb,eb)
       df
     end

@@ -100,7 +100,6 @@ module EventMachine
           end
           #puts "\n\nQuery result:\n%p\n" % [ result.values ]
         end
-        
         unless @postgres.error_message == ""
           #TODO this is wrong
           eb = (eblk || @opts[:on_error])
@@ -179,7 +178,7 @@ module EventMachine
         if not @processing or not @connected
         #if !@processing || !@connected
           @processing = true
-
+            
           @postgres.send_query(sql,params)
 
         else          
@@ -190,7 +189,7 @@ module EventMachine
       rescue Exception => e
         puts "error in execute #{e}"
         if DisconnectErrors.include? e.message
-          @queue << [sql, cblk, eblk, retries]
+          @queue << [sql,params, cblk, eblk, retries]
           return #close
         else
           raise e
@@ -215,8 +214,8 @@ module EventMachine
 
       def next_query
         if @connected and !@processing and pending = @queue.shift
-          sql, cblk, eblk = pending
-          execute(sql, cblk, eblk)
+          sql, params, cblk, eblk = pending
+          execute(sql, params, cblk, eblk)
         end
       end
 

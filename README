@@ -1,9 +1,8 @@
 Async PostgreSQL driver for Ruby/EventMachine
-  based off Aman Gupta's mysql driver
-
 
 Requires pg
 
+To run the specs, you will need rspec, run "rspec spec/postgres_spec.rb"
 
 
 TODOS:

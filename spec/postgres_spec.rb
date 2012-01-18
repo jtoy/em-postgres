@@ -84,11 +84,9 @@ describe EventMachine::Postgres do
       conn = EventMachine::Postgres.new(:database => 'test')
 
       results = []
-      #debugger
       conn.execute("select 1 AS x;") {|res| puts res.inspect; results.push(res.first["x"].to_i)}
       conn.execute("select 2 AS x;") {|res| puts res.inspect;results.push(res.first["x"].to_i)}
       conn.execute("select 3 AS x;") {|res| puts res.inspect;results.push(res.first["x"].to_i)}
-      #debugger
       EventMachine.add_timer(0.05) {
         results.should == [1,2,3]
         #conn.connection_pool.first.close
@@ -132,6 +130,22 @@ describe EventMachine::Postgres do
       }
     }
   end
+
+  it "should work with bind parameters" do
+    EventMachine.run {
+      conn = EventMachine::Postgres.new(:database=> 'test')
+      conn.execute("select $1::int as bind1;",[4]){|r|
+        r.first["bind1"].to_i.should == 4
+      }
+      conn.execute("select $1::text as bind1;",['four']){|r|
+        r.first["bind1"].should == 'four'
+        EventMachine.stop
+      }
+      
+    }
+  end
+  
+  
 
 =begin
   it "should work with synchronous commands" do
