@@ -145,6 +145,19 @@ describe EventMachine::Postgres do
     }
   end
   
+  it "should allow the creation of a prepare statement" do
+    EventMachine.run {
+      conn = EventMachine::Postgres.new(:database=> 'test')
+      prepare_name = "random#{rand(69)}"
+      i = rand(69)
+      conn.prepare(prepare_name,"select #{i};")
+      conn.execute(prepare_name){|r|
+        r.first["?column?"].to_i.should == i
+        EventMachine.stop
+      }      
+    }
+  end
+  
   
 
 =begin

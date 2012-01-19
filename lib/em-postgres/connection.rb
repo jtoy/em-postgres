@@ -171,16 +171,17 @@ module EventMachine
       EM.add_timer(1) { reconnect }
     end
 
-
     def execute(sql,params=nil, cblk = nil, eblk = nil, retries = 0)
-      
       begin
         if not @processing or not @connected
         #if !@processing || !@connected
           @processing = true
             
-          @postgres.send_query(sql,params)
-
+          if sql =~ /\s+/
+            @postgres.send_query(sql,params)
+          else
+            @postgres.send_query_prepared(sql,params)
+          end
         else          
           @queue << [sql,params, cblk, eblk, retries]
           return
@@ -200,7 +201,11 @@ module EventMachine
 
     # act like the pg driver
     def method_missing(method, *args, &blk)
-      @postgres.send(method, *args, &blk) if @postres.respond_to? method
+      if @postgres.respond_to? method
+        @postgres.send(method, *args, &blk) 
+      else
+        super
+      end
     end
 
     def close
